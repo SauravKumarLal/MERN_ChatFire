@@ -1,7 +1,10 @@
 import { useState } from "react";
 import "./login.css";
 import { toast } from "react-toastify";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import upload from "../../lib/upload";
@@ -12,7 +15,7 @@ const Login = () => {
     url: "",
   });
 
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false);
 
   const handleAvatar = (e) => {
     if (e.target.files[0]) {
@@ -25,18 +28,31 @@ const Login = () => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setLoading(true)
+    setLoading(true);
     const formData = new FormData(e.target);
 
     const { username, email, password } = Object.fromEntries(formData);
 
+    // VALIDATE INPUTS
+    if (!username || !email || !password)
+      return toast.warn("Please enter inputs!");
+    if (!avatar.file) return toast.warn("Please upload an avatar!");
+
+    // VALIDATE UNIQUE USERNAME
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("username", "==", username));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      return toast.warn("Select another username");
+    }
+    
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
 
       const imgUrl = await upload(avatar.file);
 
       await setDoc(doc(db, "users", res.user.uid), {
-        username,// username: username, -> since we are using same name
+        username, // username: username, -> since we are using same name
         email,
         avatar: imgUrl,
         id: res.user.uid,
@@ -47,13 +63,11 @@ const Login = () => {
         chats: [],
       });
 
-      toast.success("Account created: You can login now :)")
-
+      toast.success("Account created: You can login now :)");
     } catch (err) {
       console.log(err);
       toast.error(err.message);
-    }
-    finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -67,12 +81,10 @@ const Login = () => {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-    } 
-    catch (err) {
+    } catch (err) {
       console.log(err);
       toast.error(err.message);
-    }
-    finally{
+    } finally {
       setLoading(false);
     }
   };
